@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Chat - Demo 2{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>Simple Message Board</h2>
+    
+    <!-- Message Form -->
+    <div class="message-form">
+        <form method="POST" action="{{ url_for('send_message') }}">
+            <div class="form-group">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" placeholder="Enter your name" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="message">Message:</label>
+                <input type="text" id="message" name="message" placeholder="Type your message here..." required>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">Send Message</button>
+        </form>
+        
+        <form method="POST" action="{{ url_for('clear_messages') }}" style="display: inline;">
+            <button type="submit" class="btn btn-secondary">Clear All Messages</button>
+        </form>
+    </div>
+    
+    <!-- Messages Display -->
+    <div class="messages-container">
+        <h3>Messages ({{ messages|length }}):</h3>
+        
+        {% if messages %}
+            <div class="messages">
+                {% for msg in messages %}
+                    <div class="message">
+                        <strong>{{ msg.username }}:</strong> {{ msg.message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="no-messages">No messages yet. Be the first to send one!</p>
+        {% endif %}
+    </div>
+    
+    <div class="info-box">
+        <h3>What's New in Demo 2:</h3>
+        <ul>
+            <li>HTML forms for user input</li>
+            <li>POST request handling</li>
+            <li>Form data processing</li>
+            <li>In-memory message storage</li>
+            <li>Template variables and loops</li>
+        </ul>
+        <p><strong>Limitation:</strong> You need to refresh the page to see new messages!</p>
+    </div>
+</div>
+{% endblock %}
