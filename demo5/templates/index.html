@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Nickname Modal -->
+<div id="nicknameModal" class="modal">
+    <div class="modal-content">
+        <h2>Welcome to the Chat!</h2>
+        <p>Please enter your nickname:</p>
+        <input type="text" id="nicknameInput" placeholder="Your nickname..." maxlength="20">
+        <button id="joinButton">Join Chat</button>
+    </div>
+</div>
+
+<div class="chat-layout">
+    <!-- Main Chat Area -->
+    <div class="chat-container">
+        <div class="chat-header">
+            <h3>Chat Room</h3>
+            <span id="userCount" class="user-count">0 users online</span>
+        </div>
+        
+        <div class="messages" id="messages">
+            <!-- Messages will appear here -->
+        </div>
+        
+        <div class="input-container">
+            <input type="text" id="messageInput" placeholder="Type your message..." maxlength="500" disabled>
+            <button id="sendButton" disabled>Send</button>
+        </div>
+    </div>
+    
+    <!-- User List Sidebar -->
+    <div class="user-list-container">
+        <h3>Online Users</h3>
+        <div id="userList" class="user-list">
+            <!-- Users will appear here -->
+        </div>
+    </div>
+</div>
+
+<div class="info">
+    <p><strong>What's new in Demo 5:</strong></p>
+    <ul>
+        <li>✅ User nicknames and join/leave notifications</li>
+        <li>✅ Message timestamps</li>
+        <li>✅ Online user list</li>
+        <li>✅ System messages for user activity</li>
+        <li>✅ Better user experience with modal dialog</li>
+    </ul>
+    <p><strong>Try this:</strong> Open multiple tabs with different nicknames to see the full experience!</p>
+</div>
+
+<script>
+    const socket = io();
+    const messagesDiv = document.getElementById('messages');
+    const messageInput = document.getElementById('messageInput');
+    const sendButton = document.getElementById('sendButton');
+    const nicknameModal = document.getElementById('nicknameModal');
+    const nicknameInput = document.getElementById('nicknameInput');
+    const joinButton = document.getElementById('joinButton');
+    const userList = document.getElementById('userList');
+    const userCount = document.getElementById('userCount');
+    
+    let currentNickname = '';
+    let isJoined = false;
+
+    // Show nickname modal on page load
+    nicknameModal.style.display = 'flex';
+    nicknameInput.focus();
+
+    // Function to join chat
+    function joinChat() {
+        const nickname = nicknameInput.value.trim();
+        if (nickname) {
+            currentNickname = nickname;
+            socket.emit('join_chat', { nickname: nickname });
+            nicknameModal.style.display = 'none';
+            messageInput.disabled = false;
+            sendButton.disabled = false;
+            messageInput.focus();
+            isJoined = true;
+        }
+    }
+
+    // Function to add a message to the chat
+    function addMessage(message) {
+        const messageElement = document.createElement('div');
+        
+        if (message.type === 'system') {
+            messageElement.className = 'message system-message';
+            messageElement.innerHTML = `
+                <span class="timestamp">[${message.timestamp}]</span>
+                <span class="text">${escapeHtml(message.text)}</span>
+            `;
+        } else {
+            messageElement.className = 'message user-message';
+            const isOwnMessage = message.user_id === socket.id;
+            if (isOwnMessage) {
+                messageElement.classList.add('own-message');
+            }
+            
+            messageElement.innerHTML = `
+                <div class="message-header">
+                    <span class="nickname">${escapeHtml(message.nickname)}</span>
+                    <span class="timestamp">[${message.timestamp}]</span>
+                </div>
+                <div class="message-text">${escapeHtml(message.text)}</div>
+            `;
+        }
+        
+        messagesDiv.appendChild(messageElement);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    // Function to update user list
+    function updateUserList(users) {
+        userList.innerHTML = '';
+        userCount.textContent = `${users.length} user${users.length !== 1 ? 's' : ''} online`;
+        
+        users.forEach(user => {
+            const userElement = document.createElement('div');
+            userElement.className = 'user-item';
+            if (user.id === socket.id) {
+                userElement.classList.add('current-user');
+            }
+            
+            userElement.innerHTML = `
+                <span class="user-nickname">${escapeHtml(user.nickname)}</span>
+                <span class="user-joined">joined ${user.joined_at}</span>
+            `;
+            
+            userList.appendChild(userElement);
+        });
+    }
+
+    // Function to escape HTML to prevent XSS
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Function to send a message
+    function sendMessage() {
+        const message = messageInput.value.trim();
+        if (message && isJoined) {
+            socket.emit('send_message', { message: message });
+            messageInput.value = '';
+        }
+    }
+
+    // Event listeners
+    joinButton.addEventListener('click', joinChat);
+    sendButton.addEventListener('click', sendMessage);
+    
+    nicknameInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            joinChat();
+        }
+    });
+    
+    messageInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            sendMessage();
+        }
+    });
+
+    // Socket event listeners
+    socket.on('connect', function() {
+        console.log('Connected to server');
+    });
+
+    socket.on('disconnect', function() {
+        console.log('Disconnected from server');
+        if (isJoined) {
+            addMessage({
+                type: 'system',
+                text: '🔴 Disconnected from chat',
+                timestamp: new Date().toLocaleTimeString()
+            });
+        }
+    });
+
+    socket.on('new_message', function(message) {
+        addMessage(message);
+    });
+
+    socket.on('user_joined', function(message) {
+        addMessage(message);
+    });
+
+    socket.on('user_left', function(message) {
+        addMessage(message);
+    });
+
+    socket.on('user_list_update', function(users) {
+        updateUserList(users);
+    });
+</script>
+{% endblock %}
