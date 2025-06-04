@@ -36,6 +36,9 @@ source .venv/bin/activate
 ### 3. Install dependencies
 
 ```bash
+# Start a project
+uv init
+
 # For Demo 1 & 2 (basic Flask)
 uv add flask
 
