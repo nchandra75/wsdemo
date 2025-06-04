@@ -50,6 +50,14 @@ uv add flask-socketio
 
 Each demo is self-contained and can be run independently. Navigate to the demo directory and run the Flask application.
 
+### 📚 Sidebar: WebSockets vs SocketIO
+Before diving into the demos, check out the `demo-sidebar/` directory to see a side-by-side comparison of raw WebSockets vs Flask-SocketIO. This will help you understand why we use SocketIO as a simpler abstraction!
+
+```bash
+cd demo-sidebar
+# See the README.md there for instructions
+```
+
 ### Demo 1: Basic Flask Server
 ```bash
 cd demo1

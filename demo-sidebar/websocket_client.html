@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raw WebSocket Echo Client</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .connected { background-color: #d4edda; color: #155724; }
+        .disconnected { background-color: #f8d7da; color: #721c24; }
+        .connecting { background-color: #fff3cd; color: #856404; }
+        
+        #messages {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 10px 0;
+            background-color: #fafafa;
+        }
+        .message {
+            margin: 5px 0;
+            padding: 5px;
+            border-radius: 3px;
+        }
+        .sent { background-color: #e3f2fd; }
+        .received { background-color: #f3e5f5; }
+        .error { background-color: #ffebee; color: #c62828; }
+        
+        input[type="text"] {
+            width: 70%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        button:hover:not(:disabled) {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Raw WebSocket Echo Client</h1>
+        <p><strong>Notice:</strong> This uses the raw WebSocket API. Compare the complexity with the SocketIO version!</p>
+        
+        <div id="status" class="status disconnected">Disconnected</div>
+        
+        <div id="messages"></div>
+        
+        <div>
+            <input type="text" id="messageInput" placeholder="Type your message here..." disabled>
+            <button id="sendButton" onclick="sendMessage()" disabled>Send</button>
+            <button id="connectButton" onclick="connect()">Connect</button>
+            <button id="disconnectButton" onclick="disconnect()" disabled>Disconnect</button>
+        </div>
+    </div>
+
+    <script>
+        let socket = null;
+        let isConnected = false;
+
+        const statusDiv = document.getElementById('status');
+        const messagesDiv = document.getElementById('messages');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const connectButton = document.getElementById('connectButton');
+        const disconnectButton = document.getElementById('disconnectButton');
+
+        function updateStatus(status, className) {
+            statusDiv.textContent = status;
+            statusDiv.className = `status ${className}`;
+        }
+
+        function addMessage(message, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            messageDiv.innerHTML = `<strong>${new Date().toLocaleTimeString()}:</strong> ${message}`;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function updateUI() {
+            messageInput.disabled = !isConnected;
+            sendButton.disabled = !isConnected;
+            connectButton.disabled = isConnected;
+            disconnectButton.disabled = !isConnected;
+        }
+
+        function connect() {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                return;
+            }
+
+            updateStatus('Connecting...', 'connecting');
+            
+            try {
+                // Create WebSocket connection
+                socket = new WebSocket('ws://localhost:8765');
+
+                // Connection opened
+                socket.onopen = function(event) {
+                    isConnected = true;
+                    updateStatus('Connected', 'connected');
+                    addMessage('Connected to server', 'received');
+                    updateUI();
+                };
+
+                // Listen for messages
+                socket.onmessage = function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        if (data.type === 'echo') {
+                            addMessage(`Echo: ${data.from_server}`, 'received');
+                        } else if (data.type === 'error') {
+                            addMessage(`Error: ${data.message}`, 'error');
+                        }
+                    } catch (e) {
+                        addMessage(`Received: ${event.data}`, 'received');
+                    }
+                };
+
+                // Connection closed
+                socket.onclose = function(event) {
+                    isConnected = false;
+                    updateStatus('Disconnected', 'disconnected');
+                    addMessage('Disconnected from server', 'error');
+                    updateUI();
+                };
+
+                // Connection error
+                socket.onerror = function(error) {
+                    isConnected = false;
+                    updateStatus('Connection Error', 'disconnected');
+                    addMessage('Connection error occurred', 'error');
+                    updateUI();
+                };
+
+            } catch (error) {
+                updateStatus('Connection Failed', 'disconnected');
+                addMessage(`Failed to connect: ${error.message}`, 'error');
+                updateUI();
+            }
+        }
+
+        function disconnect() {
+            if (socket) {
+                socket.close();
+            }
+        }
+
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (message && socket && socket.readyState === WebSocket.OPEN) {
+                const data = {
+                    message: message,
+                    timestamp: new Date().toISOString()
+                };
+                
+                try {
+                    socket.send(JSON.stringify(data));
+                    addMessage(message, 'sent');
+                    messageInput.value = '';
+                } catch (error) {
+                    addMessage(`Failed to send: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        // Allow Enter key to send message
+        messageInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Initialize UI
+        updateUI();
+    </script>
+</body>
+</html>
