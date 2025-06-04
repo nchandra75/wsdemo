@@ -65,7 +65,7 @@ async def main():
     """Start the WebSocket server"""
     logger.info("Starting raw WebSocket server on localhost:8765")
     
-    # Start the server - pass handle_client directly since it now accepts only websocket
+    # Start the server
     server = await websockets.serve(handle_client, "localhost", 8765)
     logger.info("Server started! Open websocket_client.html in your browser.")
     
