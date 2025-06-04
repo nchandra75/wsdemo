@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}Websocket Echo - Demo 3{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>Websocket Echo Test</h2>
+    
+    <!-- Connection Status -->
+    <div id="connection-status" class="status-box">
+        <span id="status-text">Connecting...</span>
+    </div>
+    
+    <!-- Echo Form -->
+    <div class="message-form">
+        <div class="form-group">
+            <label for="username">Username:</label>
+            <input type="text" id="username" placeholder="Enter your name" value="User1">
+        </div>
+        
+        <div class="form-group">
+            <label for="message">Message:</label>
+            <input type="text" id="message" placeholder="Type a message to echo...">
+        </div>
+        
+        <button id="send-btn" class="btn btn-primary" disabled>Send Echo</button>
+        <button id="clear-btn" class="btn btn-secondary">Clear Messages</button>
+    </div>
+    
+    <!-- Messages Display -->
+    <div class="messages-container">
+        <h3>Echo Responses:</h3>
+        <div id="messages" class="messages">
+            <p class="no-messages">No messages yet. Send an echo to test the websocket connection!</p>
+        </div>
+    </div>
+    
+    <div class="info-box">
+        <h3>What's New in Demo 3:</h3>
+        <ul>
+            <li>Flask-SocketIO for websocket support</li>
+            <li>Real-time bidirectional communication</li>
+            <li>JavaScript Socket.IO client</li>
+            <li>Connection status indicators</li>
+            <li>Echo functionality (send message, get it back instantly)</li>
+        </ul>
+        <p><strong>Key Difference:</strong> No page refresh needed! Messages appear instantly.</p>
+    </div>
+</div>
+
+<script>
+    // Initialize Socket.IO connection
+    const socket = io();
+    
+    // DOM elements
+    const statusText = document.getElementById('status-text');
+    const statusBox = document.getElementById('connection-status');
+    const usernameInput = document.getElementById('username');
+    const messageInput = document.getElementById('message');
+    const sendBtn = document.getElementById('send-btn');
+    const clearBtn = document.getElementById('clear-btn');
+    const messagesDiv = document.getElementById('messages');
+    
+    // Connection event handlers
+    socket.on('connect', function() {
+        console.log('Connected to server');
+        statusText.textContent = 'Connected';
+        statusBox.className = 'status-box connected';
+        sendBtn.disabled = false;
+    });
+    
+    socket.on('disconnect', function() {
+        console.log('Disconnected from server');
+        statusText.textContent = 'Disconnected';
+        statusBox.className = 'status-box disconnected';
+        sendBtn.disabled = true;
+    });
+    
+    socket.on('status', function(data) {
+        console.log('Status:', data.msg);
+        addMessage('System', data.msg, true);
+    });
+    
+    // Echo response handler
+    socket.on('echo_response', function(data) {
+        console.log('Echo response:', data);
+        addMessage(data.username, `Echo: ${data.message}`, false);
+    });
+    
+    // Send echo message
+    function sendEcho() {
+        const username = usernameInput.value.trim() || 'Anonymous';
+        const message = messageInput.value.trim();
+        
+        if (message) {
+            // Add original message to display
+            addMessage(username, message, false);
+            
+            // Send to server for echo
+            socket.emit('echo_message', {
+                username: username,
+                message: message
+            });
+            
+            // Clear input
+            messageInput.value = '';
+        }
+    }
+    
+    // Add message to display
+    function addMessage(username, message, isSystem = false) {
+        // Remove "no messages" text if it exists
+        const noMessages = messagesDiv.querySelector('.no-messages');
+        if (noMessages) {
+            noMessages.remove();
+        }
+        
+        const messageDiv = document.createElement('div');
+        messageDiv.className = isSystem ? 'message system-message' : 'message';
+        messageDiv.innerHTML = `<strong>${username}:</strong> ${message}`;
+        
+        messagesDiv.appendChild(messageDiv);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+    
+    // Clear messages
+    function clearMessages() {
+        messagesDiv.innerHTML = '<p class="no-messages">No messages yet. Send an echo to test the websocket connection!</p>';
+    }
+    
+    // Event listeners
+    sendBtn.addEventListener('click', sendEcho);
+    clearBtn.addEventListener('click', clearMessages);
+    
+    messageInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            sendEcho();
+        }
+    });
+</script>
+{% endblock %}
