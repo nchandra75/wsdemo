@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 # Keep track of connected clients
 connected_clients = set()
 
-async def handle_client(websocket, path):
+async def handle_client(websocket):
     """Handle a new client connection"""
     # Add client to our set
     connected_clients.add(websocket)

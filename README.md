@@ -44,6 +44,9 @@ uv add flask
 
 # For Demo 3+ (websockets - install when you reach Demo 3)
 uv add flask-socketio
+
+# For the sidebar on websockets
+uv add websockets
 ```
 
 ## Running the Demos
