@@ -4,7 +4,7 @@ This shows how much simpler the same functionality is with Flask-SocketIO!
 Compare this to the raw WebSocket version.
 """
 
-from flask import Flask, render_template_string
+from flask import Flask, render_template_string, request
 from flask_socketio import SocketIO, emit
 import logging
 
