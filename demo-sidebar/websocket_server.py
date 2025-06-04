@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 # Keep track of connected clients
 connected_clients = set()
 
-async def handle_client(websocket, path):
+async def handle_client(websocket):
     """Handle a new client connection"""
     # Add client to our set
     connected_clients.add(websocket)
@@ -66,7 +66,10 @@ async def main():
     logger.info("Starting raw WebSocket server on localhost:8765")
     
     # Start the server
-    server = await websockets.serve(handle_client, "localhost", 8765)
+    async def connection_handler(websocket, path):
+        await handle_client(websocket)
+    
+    server = await websockets.serve(connection_handler, "localhost", 8765)
     logger.info("Server started! Open websocket_client.html in your browser.")
     
     # Keep the server running
