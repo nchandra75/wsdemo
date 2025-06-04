@@ -1,0 +1,348 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Nickname Modal -->
+<div id="nicknameModal" class="modal">
+    <div class="modal-content">
+        <h2>Welcome to Advanced Chat!</h2>
+        <p>Please enter your nickname:</p>
+        <input type="text" id="nicknameInput" placeholder="Your nickname..." maxlength="20">
+        <p>Choose a room:</p>
+        <select id="roomSelect">
+            {% for room in rooms %}
+            <option value="{{ room }}">{{ room|title }}</option>
+            {% endfor %}
+        </select>
+        <button id="joinButton">Join Chat</button>
+    </div>
+</div>
+
+<div class="chat-layout">
+    <!-- Room Sidebar -->
+    <div class="room-sidebar">
+        <h3>Chat Rooms</h3>
+        <div id="roomList" class="room-list">
+            <!-- Rooms will appear here -->
+        </div>
+        
+        <div class="room-info">
+            <h4>Commands:</h4>
+            <p><code>/whisper [user] [message]</code></p>
+            <p><code>/w [user] [message]</code></p>
+            <p>Send private messages to users</p>
+        </div>
+    </div>
+    
+    <!-- Main Chat Area -->
+    <div class="chat-container">
+        <div class="chat-header">
+            <h3 id="currentRoomName">Chat Room</h3>
+            <span id="userCount" class="user-count">0 users online</span>
+        </div>
+        
+        <div class="messages" id="messages">
+            <!-- Messages will appear here -->
+        </div>
+        
+        <div id="typingIndicator" class="typing-indicator">
+            <!-- Typing indicators will appear here -->
+        </div>
+        
+        <div class="input-container">
+            <input type="text" id="messageInput" placeholder="Type your message... (or /whisper [user] [message])" maxlength="500" disabled>
+            <button id="sendButton" disabled>Send</button>
+        </div>
+    </div>
+    
+    <!-- User List Sidebar -->
+    <div class="user-list-container">
+        <h3>Online Users</h3>
+        <div id="userList" class="user-list">
+            <!-- Users will appear here -->
+        </div>
+    </div>
+</div>
+
+<div class="info">
+    <p><strong>What's new in Demo 6:</strong></p>
+    <ul>
+        <li>✅ Multiple chat rooms (general, random, tech)</li>
+        <li>✅ "User is typing" indicators</li>
+        <li>✅ Private messages/whispers</li>
+        <li>✅ Room switching without reconnecting</li>
+        <li>✅ Per-room user lists and message history</li>
+    </ul>
+    <p><strong>Try this:</strong></p>
+    <ul>
+        <li>Switch between rooms to see different conversations</li>
+        <li>Use <code>/whisper [username] [message]</code> for private messages</li>
+        <li>Start typing to show typing indicators to others</li>
+    </ul>
+</div>
+
+<script>
+    const socket = io();
+    const messagesDiv = document.getElementById('messages');
+    const messageInput = document.getElementById('messageInput');
+    const sendButton = document.getElementById('sendButton');
+    const nicknameModal = document.getElementById('nicknameModal');
+    const nicknameInput = document.getElementById('nicknameInput');
+    const roomSelect = document.getElementById('roomSelect');
+    const joinButton = document.getElementById('joinButton');
+    const userList = document.getElementById('userList');
+    const userCount = document.getElementById('userCount');
+    const roomList = document.getElementById('roomList');
+    const currentRoomName = document.getElementById('currentRoomName');
+    const typingIndicator = document.getElementById('typingIndicator');
+    
+    let currentNickname = '';
+    let currentRoom = '';
+    let isJoined = false;
+    let typingTimer = null;
+    let isTyping = false;
+
+    // Show nickname modal on page load
+    nicknameModal.style.display = 'flex';
+    nicknameInput.focus();
+
+    // Function to join chat
+    function joinChat() {
+        const nickname = nicknameInput.value.trim();
+        const room = roomSelect.value;
+        
+        if (nickname) {
+            currentNickname = nickname;
+            currentRoom = room;
+            socket.emit('join_room', { nickname: nickname, room: room });
+            nicknameModal.style.display = 'none';
+            messageInput.disabled = false;
+            sendButton.disabled = false;
+            messageInput.focus();
+            isJoined = true;
+            currentRoomName.textContent = room.charAt(0).toUpperCase() + room.slice(1);
+        }
+    }
+
+    // Function to switch rooms
+    function switchRoom(newRoom) {
+        if (newRoom !== currentRoom && isJoined) {
+            socket.emit('switch_room', {
+                old_room: currentRoom,
+                new_room: newRoom,
+                nickname: currentNickname
+            });
+            currentRoom = newRoom;
+            currentRoomName.textContent = newRoom.charAt(0).toUpperCase() + newRoom.slice(1);
+            messagesDiv.innerHTML = '';
+            typingIndicator.innerHTML = '';
+        }
+    }
+
+    // Function to update room list
+    function updateRoomList(rooms) {
+        roomList.innerHTML = '';
+        rooms.forEach(room => {
+            const roomElement = document.createElement('div');
+            roomElement.className = 'room-item';
+            if (room === currentRoom) {
+                roomElement.classList.add('active-room');
+            }
+            roomElement.textContent = room.charAt(0).toUpperCase() + room.slice(1);
+            roomElement.onclick = () => switchRoom(room);
+            roomList.appendChild(roomElement);
+        });
+    }
+
+    // Function to add a message to the chat
+    function addMessage(message) {
+        const messageElement = document.createElement('div');
+        
+        if (message.type === 'system') {
+            messageElement.className = 'message system-message';
+            messageElement.innerHTML = `
+                <span class="timestamp">[${message.timestamp}]</span>
+                <span class="text">${escapeHtml(message.text)}</span>
+            `;
+        } else if (message.type === 'whisper') {
+            messageElement.className = 'message whisper-message';
+            messageElement.innerHTML = `
+                <div class="message-header">
+                    <span class="whisper-label">🔒 Private</span>
+                    <span class="nickname">${escapeHtml(message.from_nickname)} → ${escapeHtml(message.to_nickname)}</span>
+                    <span class="timestamp">[${message.timestamp}]</span>
+                </div>
+                <div class="message-text">${escapeHtml(message.text)}</div>
+            `;
+        } else {
+            messageElement.className = 'message user-message';
+            const isOwnMessage = message.user_id === socket.id;
+            if (isOwnMessage) {
+                messageElement.classList.add('own-message');
+            }
+            
+            messageElement.innerHTML = `
+                <div class="message-header">
+                    <span class="nickname">${escapeHtml(message.nickname)}</span>
+                    <span class="timestamp">[${message.timestamp}]</span>
+                </div>
+                <div class="message-text">${escapeHtml(message.text)}</div>
+            `;
+        }
+        
+        messagesDiv.appendChild(messageElement);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    // Function to update user list
+    function updateUserList(data) {
+        if (data.room !== currentRoom) return;
+        
+        userList.innerHTML = '';
+        userCount.textContent = `${data.users.length} user${data.users.length !== 1 ? 's' : ''} online`;
+        
+        data.users.forEach(user => {
+            const userElement = document.createElement('div');
+            userElement.className = 'user-item';
+            if (user.id === socket.id) {
+                userElement.classList.add('current-user');
+            }
+            
+            userElement.innerHTML = `
+                <span class="user-nickname">${escapeHtml(user.nickname)}</span>
+                <span class="user-joined">joined ${user.joined_at}</span>
+            `;
+            
+            // Add click handler for whisper
+            if (user.id !== socket.id) {
+                userElement.style.cursor = 'pointer';
+                userElement.title = 'Click to whisper';
+                userElement.onclick = () => {
+                    messageInput.value = `/whisper ${user.nickname} `;
+                    messageInput.focus();
+                };
+            }
+            
+            userList.appendChild(userElement);
+        });
+    }
+
+    // Function to update typing indicators
+    function updateTypingIndicators(typingUsers) {
+        const filteredUsers = typingUsers.filter(user => user !== currentNickname);
+        
+        if (filteredUsers.length === 0) {
+            typingIndicator.innerHTML = '';
+            typingIndicator.style.display = 'none';
+        } else {
+            typingIndicator.style.display = 'block';
+            if (filteredUsers.length === 1) {
+                typingIndicator.innerHTML = `<span>${escapeHtml(filteredUsers[0])} is typing...</span>`;
+            } else if (filteredUsers.length === 2) {
+                typingIndicator.innerHTML = `<span>${escapeHtml(filteredUsers[0])} and ${escapeHtml(filteredUsers[1])} are typing...</span>`;
+            } else {
+                typingIndicator.innerHTML = `<span>${filteredUsers.length} users are typing...</span>`;
+            }
+        }
+    }
+
+    // Function to handle typing
+    function handleTyping() {
+        if (!isTyping) {
+            isTyping = true;
+            socket.emit('typing_start', { room: currentRoom });
+        }
+        
+        clearTimeout(typingTimer);
+        typingTimer = setTimeout(() => {
+            isTyping = false;
+            socket.emit('typing_stop', { room: currentRoom });
+        }, 1000);
+    }
+
+    // Function to escape HTML to prevent XSS
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Function to send a message
+    function sendMessage() {
+        const message = messageInput.value.trim();
+        if (message && isJoined) {
+            socket.emit('send_message', { message: message, room: currentRoom });
+            messageInput.value = '';
+            
+            // Stop typing indicator
+            if (isTyping) {
+                isTyping = false;
+                socket.emit('typing_stop', { room: currentRoom });
+            }
+        }
+    }
+
+    // Event listeners
+    joinButton.addEventListener('click', joinChat);
+    sendButton.addEventListener('click', sendMessage);
+    
+    nicknameInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            joinChat();
+        }
+    });
+    
+    messageInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            sendMessage();
+        } else {
+            handleTyping();
+        }
+    });
+    
+    messageInput.addEventListener('input', handleTyping);
+
+    // Socket event listeners
+    socket.on('connect', function() {
+        console.log('Connected to server');
+    });
+
+    socket.on('disconnect', function() {
+        console.log('Disconnected from server');
+        if (isJoined) {
+            addMessage({
+                type: 'system',
+                text: '🔴 Disconnected from chat',
+                timestamp: new Date().toLocaleTimeString()
+            });
+        }
+    });
+
+    socket.on('new_message', function(message) {
+        addMessage(message);
+    });
+
+    socket.on('private_message', function(message) {
+        addMessage(message);
+    });
+
+    socket.on('user_joined', function(message) {
+        addMessage(message);
+    });
+
+    socket.on('user_left', function(message) {
+        addMessage(message);
+    });
+
+    socket.on('user_list_update', function(data) {
+        updateUserList(data);
+    });
+
+    socket.on('room_list_update', function(rooms) {
+        updateRoomList(rooms);
+    });
+
+    socket.on('typing_update', function(typingUsers) {
+        updateTypingIndicators(typingUsers);
+    });
+</script>
+{% endblock %}
