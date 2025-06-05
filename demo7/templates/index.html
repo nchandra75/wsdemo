@@ -1,0 +1,413 @@
+{% extends "base.html" %}
+
+{% block title %}Demo 7: Interactive Elements{% endblock %}
+
+{% block content %}
+<div class="chat-container">
+    <div class="header">
+        <h1>🎮 Interactive Chat with Games & Polls</h1>
+        <div class="user-info">
+            <span id="current-user"></span>
+            <button id="leave-btn" style="display: none;">Leave Chat</button>
+        </div>
+    </div>
+
+    <!-- Login Form -->
+    <div id="login-form" class="login-container">
+        <h2>Join the Interactive Chat</h2>
+        <input type="text" id="username-input" placeholder="Enter your username" maxlength="20">
+        <button id="join-btn">Join Chat</button>
+    </div>
+
+    <!-- Main Chat Interface -->
+    <div id="chat-interface" style="display: none;">
+        <div class="main-content">
+            <!-- Left Sidebar -->
+            <div class="sidebar">
+                <div class="online-users">
+                    <h3>👥 Online Users</h3>
+                    <ul id="user-list"></ul>
+                </div>
+                
+                <div class="poll-section">
+                    <h3>📊 Create Poll</h3>
+                    <input type="text" id="poll-question" placeholder="Poll question">
+                    <div id="poll-options">
+                        <input type="text" class="poll-option" placeholder="Option 1">
+                        <input type="text" class="poll-option" placeholder="Option 2">
+                    </div>
+                    <button id="add-option-btn">+ Add Option</button>
+                    <button id="create-poll-btn">Create Poll</button>
+                </div>
+            </div>
+
+            <!-- Center Content -->
+            <div class="center-content">
+                <!-- Messages Area -->
+                <div class="messages-container">
+                    <div id="messages"></div>
+                </div>
+
+                <!-- Message Input -->
+                <div class="message-input-container">
+                    <input type="text" id="message-input" placeholder="Type your message..." maxlength="500">
+                    <button id="send-btn">Send</button>
+                </div>
+            </div>
+
+            <!-- Right Sidebar -->
+            <div class="right-sidebar">
+                <div class="canvas-section">
+                    <h3>🎨 Collaborative Canvas</h3>
+                    <div class="canvas-controls">
+                        <input type="color" id="color-picker" value="#000000">
+                        <button id="clear-canvas-btn">Clear</button>
+                    </div>
+                    <canvas id="collaborative-canvas" width="250" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const socket = io();
+let currentUser = '';
+let isDrawing = false;
+let lastX = 0;
+let lastY = 0;
+
+// DOM elements
+const loginForm = document.getElementById('login-form');
+const chatInterface = document.getElementById('chat-interface');
+const usernameInput = document.getElementById('username-input');
+const joinBtn = document.getElementById('join-btn');
+const leaveBtn = document.getElementById('leave-btn');
+const currentUserSpan = document.getElementById('current-user');
+const messagesDiv = document.getElementById('messages');
+const messageInput = document.getElementById('message-input');
+const sendBtn = document.getElementById('send-btn');
+const userList = document.getElementById('user-list');
+const canvas = document.getElementById('collaborative-canvas');
+const ctx = canvas.getContext('2d');
+const colorPicker = document.getElementById('color-picker');
+const clearCanvasBtn = document.getElementById('clear-canvas-btn');
+
+// Emoji reactions
+const emojis = ['👍', '❤️', '😂', '😮', '😢', '😡'];
+
+// Join chat
+joinBtn.addEventListener('click', () => {
+    const username = usernameInput.value.trim();
+    if (username) {
+        currentUser = username;
+        socket.emit('join_chat', { username });
+        loginForm.style.display = 'none';
+        chatInterface.style.display = 'block';
+        currentUserSpan.textContent = `Logged in as: ${username}`;
+        leaveBtn.style.display = 'inline-block';
+        messageInput.focus();
+    }
+});
+
+// Leave chat
+leaveBtn.addEventListener('click', () => {
+    socket.disconnect();
+    location.reload();
+});
+
+// Send message
+function sendMessage() {
+    const message = messageInput.value.trim();
+    if (message) {
+        socket.emit('send_message', { message });
+        messageInput.value = '';
+    }
+}
+
+sendBtn.addEventListener('click', sendMessage);
+messageInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        sendMessage();
+    }
+});
+
+// Socket event handlers
+socket.on('message_history', (data) => {
+    data.messages.forEach(message => {
+        addMessage(message);
+    });
+});
+
+socket.on('poll_history', (data) => {
+    data.polls.forEach(poll => {
+        addPoll(poll);
+    });
+});
+
+socket.on('new_message', (message) => {
+    addMessage(message);
+});
+
+socket.on('user_joined', (data) => {
+    addSystemMessage(`${data.username} joined the chat`, data.timestamp);
+});
+
+socket.on('user_left', (data) => {
+    addSystemMessage(`${data.username} left the chat`, data.timestamp);
+});
+
+socket.on('user_list_update', (data) => {
+    updateUserList(data.users);
+});
+
+socket.on('new_poll', (poll) => {
+    addPoll(poll);
+});
+
+socket.on('poll_updated', (poll) => {
+    updatePoll(poll);
+});
+
+socket.on('reaction_updated', (data) => {
+    updateReactions(data.message_id, data.reactions);
+});
+
+socket.on('canvas_update', (data) => {
+    drawOnCanvas(data);
+});
+
+socket.on('canvas_cleared', (data) => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    addSystemMessage(`${data.username} cleared the canvas`);
+});
+
+// Helper functions
+function addMessage(message) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message';
+    messageDiv.setAttribute('data-message-id', message.id);
+    
+    messageDiv.innerHTML = `
+        <div class="message-header">
+            <span class="username">${message.username}</span>
+            <span class="timestamp">${message.timestamp}</span>
+        </div>
+        <div class="message-content">${message.message}</div>
+        <div class="message-reactions" id="reactions-${message.id}">
+            <div class="emoji-buttons">
+                ${emojis.map(emoji => `<button class="emoji-btn" onclick="addReaction('${message.id}', '${emoji}')">${emoji}</button>`).join('')}
+            </div>
+            <div class="reactions-display"></div>
+        </div>
+    `;
+    
+    messagesDiv.appendChild(messageDiv);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+function addSystemMessage(message, timestamp = null) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'system-message';
+    messageDiv.innerHTML = `
+        <span class="system-text">${message}</span>
+        ${timestamp ? `<span class="timestamp">${timestamp}</span>` : ''}
+    `;
+    messagesDiv.appendChild(messageDiv);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+function updateUserList(users) {
+    userList.innerHTML = '';
+    users.forEach(user => {
+        const li = document.createElement('li');
+        li.textContent = user;
+        if (user === currentUser) {
+            li.classList.add('current-user');
+        }
+        userList.appendChild(li);
+    });
+}
+
+function addReaction(messageId, emoji) {
+    socket.emit('add_reaction', { message_id: messageId, emoji });
+}
+
+function updateReactions(messageId, reactions) {
+    const reactionsDisplay = document.querySelector(`#reactions-${messageId} .reactions-display`);
+    if (!reactionsDisplay) return;
+    
+    reactionsDisplay.innerHTML = '';
+    for (const [emoji, users] of Object.entries(reactions)) {
+        if (users.length > 0) {
+            const reactionSpan = document.createElement('span');
+            reactionSpan.className = 'reaction';
+            reactionSpan.innerHTML = `${emoji} ${users.length}`;
+            reactionSpan.title = `Reacted by: ${users.join(', ')}`;
+            reactionsDisplay.appendChild(reactionSpan);
+        }
+    }
+}
+
+function addPoll(poll) {
+    const pollDiv = document.createElement('div');
+    pollDiv.className = 'poll';
+    pollDiv.setAttribute('data-poll-id', poll.id);
+    
+    let optionsHtml = '';
+    for (const option of poll.options) {
+        const voteCount = poll.votes[option] ? poll.votes[option].length : 0;
+        optionsHtml += `
+            <div class="poll-option">
+                <button class="vote-btn" onclick="vote('${poll.id}', '${option}')">${option}</button>
+                <span class="vote-count">${voteCount} votes</span>
+            </div>
+        `;
+    }
+    
+    pollDiv.innerHTML = `
+        <div class="poll-header">
+            <h4>📊 ${poll.question}</h4>
+            <small>by ${poll.creator} at ${poll.timestamp}</small>
+        </div>
+        <div class="poll-options">
+            ${optionsHtml}
+        </div>
+    `;
+    
+    messagesDiv.appendChild(pollDiv);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+function updatePoll(poll) {
+    const pollDiv = document.querySelector(`[data-poll-id="${poll.id}"]`);
+    if (!pollDiv) return;
+    
+    const options = pollDiv.querySelectorAll('.poll-option');
+    options.forEach((optionDiv, index) => {
+        const option = poll.options[index];
+        const voteCount = poll.votes[option] ? poll.votes[option].length : 0;
+        const voteCountSpan = optionDiv.querySelector('.vote-count');
+        voteCountSpan.textContent = `${voteCount} votes`;
+        
+        // Highlight if current user voted for this option
+        const hasVoted = poll.votes[option] && poll.votes[option].includes(currentUser);
+        optionDiv.classList.toggle('voted', hasVoted);
+    });
+}
+
+function vote(pollId, option) {
+    socket.emit('vote_poll', { poll_id: pollId, option });
+}
+
+// Poll creation
+document.getElementById('add-option-btn').addEventListener('click', () => {
+    const pollOptions = document.getElementById('poll-options');
+    const optionCount = pollOptions.children.length;
+    if (optionCount < 6) {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'poll-option';
+        input.placeholder = `Option ${optionCount + 1}`;
+        pollOptions.appendChild(input);
+    }
+});
+
+document.getElementById('create-poll-btn').addEventListener('click', () => {
+    const question = document.getElementById('poll-question').value.trim();
+    const optionInputs = document.querySelectorAll('.poll-option');
+    const options = Array.from(optionInputs)
+        .map(input => input.value.trim())
+        .filter(option => option !== '');
+    
+    if (question && options.length >= 2) {
+        socket.emit('create_poll', { question, options });
+        
+        // Clear form
+        document.getElementById('poll-question').value = '';
+        optionInputs.forEach(input => input.value = '');
+    } else {
+        alert('Please enter a question and at least 2 options');
+    }
+});
+
+// Canvas functionality
+canvas.addEventListener('mousedown', startDrawing);
+canvas.addEventListener('mousemove', draw);
+canvas.addEventListener('mouseup', stopDrawing);
+canvas.addEventListener('mouseout', stopDrawing);
+
+function startDrawing(e) {
+    isDrawing = true;
+    const rect = canvas.getBoundingClientRect();
+    lastX = e.clientX - rect.left;
+    lastY = e.clientY - rect.top;
+    
+    socket.emit('canvas_draw', {
+        type: 'start',
+        x: lastX,
+        y: lastY,
+        color: colorPicker.value
+    });
+}
+
+function draw(e) {
+    if (!isDrawing) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const currentX = e.clientX - rect.left;
+    const currentY = e.clientY - rect.top;
+    
+    drawLine(lastX, lastY, currentX, currentY, colorPicker.value);
+    
+    socket.emit('canvas_draw', {
+        type: 'draw',
+        x: currentX,
+        y: currentY,
+        color: colorPicker.value
+    });
+    
+    lastX = currentX;
+    lastY = currentY;
+}
+
+function stopDrawing() {
+    if (!isDrawing) return;
+    isDrawing = false;
+    
+    socket.emit('canvas_draw', {
+        type: 'end',
+        x: lastX,
+        y: lastY,
+        color: colorPicker.value
+    });
+}
+
+function drawLine(x1, y1, x2, y2, color) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+}
+
+function drawOnCanvas(data) {
+    if (data.type === 'draw') {
+        drawLine(data.prevX || data.x, data.prevY || data.y, data.x, data.y, data.color);
+    }
+}
+
+clearCanvasBtn.addEventListener('click', () => {
+    socket.emit('clear_canvas');
+});
+
+// Enter username on Enter key
+usernameInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        joinBtn.click();
+    }
+});
+</script>
+{% endblock %}
