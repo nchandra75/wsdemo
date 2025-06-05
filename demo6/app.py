@@ -268,4 +268,4 @@ def handle_typing_stop(data):
         emit('typing_update', list(typing_users[room_name].values()), room=room_name)
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True, port=5006)
+    socketio.run(app, debug=True, host='0.0.0.0', port=5006)

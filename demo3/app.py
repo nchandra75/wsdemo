@@ -38,4 +38,4 @@ def handle_echo_message(data):
     })
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True, port=5003)
+    socketio.run(app, debug=True, host='0.0.0.0', port=5003)
