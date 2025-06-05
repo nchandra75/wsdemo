@@ -7,10 +7,6 @@ paginate: true
 # Fun with Websockets
 ## Building Real-time Web Applications
 
-**Duration:** 2 hours  
-**Target:** Undergraduate students  
-**Goal:** Build a real-time chat application
-
 ---
 
 # What We'll Build Today
@@ -164,6 +160,15 @@ socket.on('echo_response', function(data) {
 
 ---
 
+# Polling vs WebSockets
+
+- Not all servers support websockets
+- Firewalls, proxies etc. can block
+- **Long polling** as an alternative
+- `socket.io` vs `websockets`
+
+---
+
 # Demo 4: Real-time Chat
 
 ```python
@@ -274,16 +279,3 @@ def handle_join_room(data):
 - Live dashboards
 - Interactive presentations
 - And much more!
-
----
-
-# Let's Code!
-
-**Time to build your chat application**
-
-1. Start with Demo 1
-2. Work through each demo
-3. Experiment and modify
-4. Ask questions!
-
-**Remember:** Each demo builds on the previous one
