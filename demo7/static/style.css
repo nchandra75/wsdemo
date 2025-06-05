@@ -21,7 +21,7 @@ body {
     background: white;
     border-radius: 15px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-    overflow: hidden;
+    overflow: auto;
     height: 90vh;
     max-height: 90vh;
     display: flex;
@@ -111,7 +111,7 @@ body {
 .main-content {
     display: flex;
     flex: 1;
-    overflow: hidden;
+    overflow: auto;
     min-height: 0; /* Important for flex children to shrink */
 }
 
