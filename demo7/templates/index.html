@@ -39,6 +39,15 @@
                     <button id="add-option-btn">+ Add Option</button>
                     <button id="create-poll-btn">Create Poll</button>
                 </div>
+                
+                <div class="canvas-section">
+                    <h3>🎨 Collaborative Canvas</h3>
+                    <div class="canvas-controls">
+                        <input type="color" id="color-picker" value="#000000">
+                        <button id="clear-canvas-btn">Clear</button>
+                    </div>
+                    <canvas id="collaborative-canvas" width="250" height="150"></canvas>
+                </div>
             </div>
 
             <!-- Center Content -->
@@ -57,13 +66,20 @@
 
             <!-- Right Sidebar -->
             <div class="right-sidebar">
-                <div class="canvas-section">
-                    <h3>🎨 Collaborative Canvas</h3>
-                    <div class="canvas-controls">
-                        <input type="color" id="color-picker" value="#000000">
-                        <button id="clear-canvas-btn">Clear</button>
+                <div class="stats-section">
+                    <h3>📈 Chat Stats</h3>
+                    <div class="stat-item">
+                        <span class="stat-label">Messages:</span>
+                        <span id="message-count">0</span>
                     </div>
-                    <canvas id="collaborative-canvas" width="250" height="200"></canvas>
+                    <div class="stat-item">
+                        <span class="stat-label">Active Polls:</span>
+                        <span id="poll-count">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Online Users:</span>
+                        <span id="user-count">0</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -137,6 +153,7 @@ socket.on('message_history', (data) => {
     data.messages.forEach(message => {
         addMessage(message);
     });
+    updateStats();
 });
 
 socket.on('poll_history', (data) => {
@@ -147,6 +164,7 @@ socket.on('poll_history', (data) => {
 
 socket.on('new_message', (message) => {
     addMessage(message);
+    updateStats();
 });
 
 socket.on('user_joined', (data) => {
@@ -159,10 +177,12 @@ socket.on('user_left', (data) => {
 
 socket.on('user_list_update', (data) => {
     updateUserList(data.users);
+    updateStats();
 });
 
 socket.on('new_poll', (poll) => {
     addPoll(poll);
+    updateStats();
 });
 
 socket.on('poll_updated', (poll) => {
@@ -409,5 +429,20 @@ usernameInput.addEventListener('keypress', (e) => {
         joinBtn.click();
     }
 });
+
+// Update stats display
+function updateStats() {
+    const messageCount = document.querySelectorAll('.message').length;
+    const pollCount = document.querySelectorAll('.poll').length;
+    const userCount = document.querySelectorAll('#user-list li').length;
+    
+    const messageCountEl = document.getElementById('message-count');
+    const pollCountEl = document.getElementById('poll-count');
+    const userCountEl = document.getElementById('user-count');
+    
+    if (messageCountEl) messageCountEl.textContent = messageCount;
+    if (pollCountEl) pollCountEl.textContent = pollCount;
+    if (userCountEl) userCountEl.textContent = userCount;
+}
 </script>
 {% endblock %}

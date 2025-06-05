@@ -384,6 +384,10 @@ body {
 }
 
 /* Canvas Section */
+.canvas-section {
+    margin-top: 30px;
+}
+
 .canvas-section h3 {
     color: #667eea;
     margin-bottom: 15px;
@@ -421,6 +425,34 @@ body {
     cursor: crosshair;
     background: white;
     width: 100%;
+    max-width: 100%;
+}
+
+/* Stats Section */
+.stats-section h3 {
+    color: #667eea;
+    margin-bottom: 15px;
+    font-size: 1.1em;
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 12px;
+    margin: 5px 0;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+    font-size: 14px;
+}
+
+.stat-label {
+    color: #6c757d;
+}
+
+.stat-item span:last-child {
+    font-weight: bold;
+    color: #667eea;
 }
 
 /* Responsive Design */
