@@ -16,7 +16,7 @@ A hands-on workshop for undergraduate students to learn websockets through build
 # On macOS and Linux
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# On Windows
+# On Windows (untested)
 powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
@@ -34,6 +34,8 @@ source .venv/bin/activate
 ```
 
 ### 3. Install dependencies
+
+Note that the `uv.lock` and related files are intentionally left out of this repo so that you can run through all the commands and try it on your own.  The aim of this repo is to encourage experimentation, so if something is broken you can fix it and feel good about it.
 
 ```bash
 # Start a project
@@ -53,13 +55,7 @@ uv add websockets
 
 Each demo is self-contained and can be run independently. Navigate to the demo directory and run the Flask application.
 
-### 📚 Sidebar: WebSockets vs SocketIO
-Before diving into the demos, check out the `demo-sidebar/` directory to see a side-by-side comparison of raw WebSockets vs Flask-SocketIO. This will help you understand why we use SocketIO as a simpler abstraction!
-
-```bash
-cd demo-sidebar
-# See the README.md there for instructions
-```
+**WARNING**: The demos here have been set to run on all network interfaces: in general this is insecure as it allows outsiders to connect to a server on your system.  You should either run a firewall, or change this (delete the `host='0.0.0.0'` bit).
 
 ### Demo 1: Basic Flask Server
 ```bash
@@ -68,7 +64,7 @@ python app.py
 ```
 Visit: http://localhost:5001
 
-**What you'll learn:**
+**Purpose:** Review
 - Basic Flask application structure
 - Routing and templates
 - Serving static files
@@ -80,11 +76,19 @@ python app.py
 ```
 Visit: http://localhost:5002
 
-**What you'll learn:**
+**Purpose:** Review
 - HTML forms and POST requests
 - Form data processing
 - Template variables and loops
-- **Limitation:** Page refresh required to see new messages
+- **Limitation:** On each form post, a complete new request is being sent to the server that then responds.  This is not much overhead for a small application like this, but is not really *interactive*.
+
+### Sidebar: WebSockets vs SocketIO
+Before starting on the websocket demos, check out the `demo-sidebar/` directory to see a side-by-side comparison of raw WebSockets vs Flask-SocketIO. This will help you understand why we use SocketIO as a simpler abstraction.
+
+```bash
+cd demo-sidebar
+# See the README.md there for instructions
+```
 
 ### Demo 3: First Websocket Connection
 ```bash
@@ -148,11 +152,12 @@ Visit: http://localhost:5007
 
 ## Workshop Flow
 
+During the workshop, we will work through the examples, but also have brief interludes talking about background and related knowledge.  If you are only seeing this repo, then it is suggested that you:
+
 1. **Start with Demo 1** - Get familiar with Flask basics
 2. **Progress through each demo** - Each builds on the previous
 3. **Test each demo** before moving to the next
 4. **Experiment** - Try modifying the code to see what happens
-5. **Ask questions** - The instructor is there to help!
 
 ## Troubleshooting
 
@@ -161,6 +166,7 @@ Visit: http://localhost:5007
 **Port already in use:**
 ```bash
 # Kill process using the port (replace 5001 with your port)
+# (Note: `lsof` probably only works on Linux)
 lsof -ti:5001 | xargs kill -9
 ```
 
@@ -203,3 +209,13 @@ After completing the workshop, consider exploring:
 - [Flask-SocketIO Documentation](https://flask-socketio.readthedocs.io/)
 - [WebSocket Protocol](https://tools.ietf.org/html/rfc6455)
 - [uv Documentation](https://docs.astral.sh/uv/)
+
+## Note on material
+
+This material was prepared for use in the "Fun with Websockets" workshop as part of Paradox 2025 at IIT Madras.  The demo examples were prepared with coding help from [Claude](https://claude.ai/).  Any errors that still exist are intentional and left as exercises to the reader.
+
+None of this code is remotely production ready, and should not be deployed as such on an actual user facing system.  In particular, the code has not been reviewed for security vulnerabilities, and it is quite likely there are simple injection issues that could be exploited without much effort.  The code also displays poorly on mobile platforms - some basic responsive layout has been implemented, but is not well tested, and is known to have issues with scrolling on mobile browsers.  Feel free to fix these and improve the demos.
+
+---
+
+Nitin Chandrachoodan, IIT Madras, 2025

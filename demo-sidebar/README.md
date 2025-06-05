@@ -39,4 +39,4 @@ Then visit http://localhost:5000
 3. **Browser support**: SocketIO works even in older browsers that don't support WebSockets
 4. **Development speed**: SocketIO lets you focus on your application logic, not protocol details
 
-Both examples do the same thing: echo back any message you send. But notice how much simpler the SocketIO version is to write and maintain!
+Both examples do the same thing: echo back any message you send. But notice how much simpler the SocketIO version is to write and maintain.
