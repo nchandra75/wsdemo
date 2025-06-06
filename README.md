@@ -216,6 +216,18 @@ This material was prepared for use in the "Fun with Websockets" workshop as part
 
 None of this code is remotely production ready, and should not be deployed as such on an actual user facing system.  In particular, the code has not been reviewed for security vulnerabilities, and it is quite likely there are simple injection issues that could be exploited without much effort.  The code also displays poorly on mobile platforms - some basic responsive layout has been implemented, but is not well tested, and is known to have issues with scrolling on mobile browsers.  Feel free to fix these and improve the demos.
 
+## Temporary links for the workshop
+
+During the workshop, all the demos can be accessed at the following links.  However, they may go down randomly at any time and are not guaranteed to be available, as there will be tweaking of the code and updating live during the workshop.  These are provided only for the case where someone is not able to access the IITM Intranet ports.
+
+- [Demo 1](https://demo1.wsdemo.dev.nptel.ac.in/)
+- [Demo 2](https://demo2.wsdemo.dev.nptel.ac.in/)
+- [Demo 3](https://demo3.wsdemo.dev.nptel.ac.in/)
+- [Demo 4](https://demo4.wsdemo.dev.nptel.ac.in/)
+- [Demo 5](https://demo5.wsdemo.dev.nptel.ac.in/)
+- [Demo 6](https://demo6.wsdemo.dev.nptel.ac.in/)
+- [Demo 7](https://demo7.wsdemo.dev.nptel.ac.in/)
+
 ---
 
 Nitin Chandrachoodan, IIT Madras, 2025
