@@ -51,8 +51,6 @@ def about():
     return render_template('about.html')
 ```
 
-**Let's run this and see it in action!**
-
 ---
 
 # What Just Happened?
@@ -192,12 +190,19 @@ def handle_send_message(data):
 socket.emit('event_name', data);
 ```
 
+---
+
+# Key JavaScript Patterns
+
 ## Receiving Data from Server
 ```javascript
 socket.on('event_name', function(data) {
     // Handle the data
 });
 ```
+---
+
+# Key JavaScript Patterns
 
 ## Connection Events
 ```javascript

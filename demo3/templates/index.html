@@ -51,7 +51,17 @@
 <script>
     // Initialize Socket.IO connection
     const socket = io();
-    
+
+    // // Force WebSocket transport only for testing
+    // const socket = io({
+    //     transports: ['websocket']
+    // });    
+
+    // // Force Long Polling transport only for testing
+    // const socket = io({
+    //     transports: ['jsonp-polling']
+    // });    
+
     // DOM elements
     const statusText = document.getElementById('status-text');
     const statusBox = document.getElementById('connection-status');
